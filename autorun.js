@@ -1,22 +1,54 @@
-// Cette fonction est appelée automatiquement par Outlook à chaque nouveau message
+/* === DEBUG === */
+console.log("autorun.js chargé");
+
+Office.onReady(() => {
+  console.log("Office prêt");
+});
+
+/**
+ * Event Outlook : nouveau message
+ */
 function onNewMessageCompose(event) {
-    const signature = "<br><br>---<br><b>GROUPE T3M</b><br>Signature Automatique";
-    
-    // Insère la signature dans le corps du mail
-    Office.context.mailbox.item.body.setSelectedDataAsync(
-        signature,
-        { coercionType: Office.CoercionType.Html },
-        function (asyncResult) {
-            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                console.log("Signature insérée avec succès.");
-            } else {
-                console.error("Erreur lors de l'insertion : " + asyncResult.error.message);
+  console.log("OnNewMessageCompose déclenché");
+
+  const signatureHtml = `
+    <br/>
+    <div style="font-family: Arial; font-size: 11pt;">
+      <strong>Jean Dupont</strong><br/>
+      Consultant IT<br/>
+      <strong>T3M</strong><br/>
+      📞 01 23 45 67 89<br/>
+      ✉️ jean.dupont@t3m.fr
+      <hr/>
+    </div>
+  `;
+
+  Office.context.mailbox.item.body.getAsync(
+    Office.CoercionType.Html,
+    function (result) {
+
+      if (result.status === Office.AsyncResultStatus.Succeeded) {
+        // Évite les doublons
+        if (!result.value.includes("Jean Dupont")) {
+          Office.context.mailbox.item.body.setAsync(
+            result.value + signatureHtml,
+            { coercionType: Office.CoercionType.Html },
+            function () {
+              console.log("Signature insérée");
+              event.completed();
             }
-            // Indique à Outlook que l'opération est terminée
-            event.completed();
+          );
+        } else {
+          console.log("Signature déjà présente");
+          event.completed();
         }
-    );
+      } else {
+        console.error("Erreur lecture body");
+        event.completed();
+      }
+    }
+  );
 }
 
-// Enregistrement de la fonction pour qu'Outlook la reconnaisse
+/* === OBLIGATOIRE === */
 Office.actions.associate("onNewMessageCompose", onNewMessageCompose);
